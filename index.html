@@ -35,15 +35,25 @@
     document.getElementById('msg').textContent = 'Ожидаю ссылку вида …/?id=<ID страницы Notion>&mode=cowork|chat';
   } else {
     var prompt = 'Возьми задачу по скилу notion-ai-task: https://www.notion.so/' + id;
-    var base = mode === 'chat' ? 'claude://claude.ai/new?q=' : 'claude://cowork/new?q=';
-    var url = base + encodeURIComponent(prompt);
+    var q = encodeURIComponent(prompt);
     var go = document.getElementById('go');
-    go.href = url;
-    go.hidden = false;
-    document.getElementById('title').textContent = mode === 'chat' ? 'Открываю чат Claude…' : 'Открываю Cowork…';
-    location.href = url;
-    // Chrome разрешает закрыть вкладку, открытую извне и без истории; в других браузерах просто ничего не произойдёт.
-    setTimeout(function () { window.close(); }, 1500);
+    if (mode === 'chat') {
+      // claude://claude.ai/new в приложении не переключает в Chat (проверено 25.09.2026),
+      // поэтому Deep Research открываем в веб-версии claude.ai — там новый обычный чат с Research.
+      var web = 'https://claude.ai/new?q=' + q;
+      go.href = web;
+      go.hidden = false;
+      document.getElementById('title').textContent = 'Открываю чат на claude.ai…';
+      location.replace(web);
+    } else {
+      var url = 'claude://cowork/new?q=' + q;
+      go.href = url;
+      go.hidden = false;
+      document.getElementById('title').textContent = 'Открываю Cowork…';
+      location.href = url;
+      // Chrome разрешает закрыть вкладку, открытую извне и без истории; в других браузерах ничего не произойдёт.
+      setTimeout(function () { window.close(); }, 1500);
+    }
   }
 </script>
 </body>
