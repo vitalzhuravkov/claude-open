@@ -25,14 +25,22 @@
 </main>
 <script>
   // Opens a new Claude Cowork session prefilled with the notion-ai-task skill for a Notion task.
-  // Only a Notion page ID (32 hex characters) is accepted, so the link cannot inject arbitrary prompts.
-  var id = (new URLSearchParams(location.search).get('id') || '').replace(/-/g, '').toLowerCase();
+  // Params: id — Notion page ID (32 hex, required); name — task name (optional, display only).
+  // The ID is validated strictly; the name is flattened to one line and capped, and the skill
+  // treats it as a label only (task facts always come from Notion).
+  var params = new URLSearchParams(location.search);
+  var id = (params.get('id') || '').replace(/-/g, '').toLowerCase();
+  var name = (params.get('name') || '')
+    .replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 200);
 
   if (!/^[0-9a-f]{32}$/.test(id)) {
     document.getElementById('title').textContent = 'Missing task ID';
-    document.getElementById('msg').textContent = 'Expected a link like …/?id=<Notion page ID>';
+    document.getElementById('msg').textContent = 'Expected a link like …/?id=<Notion page ID>&name=<task name>';
   } else {
-    var prompt = '/notion-ai-task https://www.notion.so/' + id;
+    var prompt = 'Run notion-ai-task https://www.notion.so/' + id + (name ? ' ' + name : '');
     var url = 'claude://cowork/new?q=' + encodeURIComponent(prompt);
     var go = document.getElementById('go');
     go.href = url;
