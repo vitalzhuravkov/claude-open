@@ -42,8 +42,8 @@
   // Params: id — Notion page ID (32 hex, required); name — task name (optional, display only).
   // The ID is validated strictly; the name is flattened to one line and capped, and the skill
   // treats it as a label only (task facts always come from Notion).
-  // If the claude:// redirect doesn't work, the page stays open and shows the same command to copy by hand.
-  // Once Claude has taken over, the tab closes itself (see closeSelf below).
+  // Desktop: the deep link carries the prompt, so the page redirects and closes itself.
+  // Phone: the deep link opens Claude without the prompt, so the page stays open with the command to copy.
   var params = new URLSearchParams(location.search);
   var id = (params.get('id') || '').replace(/-/g, '').toLowerCase();
   var name = (params.get('name') || '')
@@ -91,44 +91,35 @@
     go.href = url;
     go.hidden = false;
 
-    var copyBtn = document.getElementById('copy');
-    var resetTimer;
-    document.getElementById('cmd').textContent = prompt;
-    document.getElementById('fallback').hidden = false;
-    copyBtn.addEventListener('click', function () {
-      clearTimeout(resetTimer);
-      copyText(prompt).then(function () {
-        copyBtn.textContent = 'Copied ✓';
-        copyBtn.classList.add('done');
-      }, function () {
-        selectCommand();
-        copyBtn.textContent = 'Press ⌘C / Ctrl+C to copy';
-      }).then(function () {
-        resetTimer = setTimeout(function () {
-          copyBtn.textContent = 'Copy command';
-          copyBtn.classList.remove('done');
-        }, 2500);
+    // iPadOS Safari reports itself as a Mac, so a touch-capable "Macintosh" counts as mobile.
+    var ua = navigator.userAgent;
+    var mobile = /Android|iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    if (!mobile) {
+      location.href = url;
+      setTimeout(function () { window.close(); }, 1500);
+    } else {
+      var copyBtn = document.getElementById('copy');
+      var resetTimer;
+      document.getElementById('cmd').textContent = prompt;
+      document.getElementById('fallback').hidden = false;
+      copyBtn.addEventListener('click', function () {
+        clearTimeout(resetTimer);
+        copyText(prompt).then(function () {
+          copyBtn.textContent = 'Copied ✓';
+          copyBtn.classList.add('done');
+        }, function () {
+          selectCommand();
+          copyBtn.textContent = 'Press ⌘C / Ctrl+C to copy';
+        }).then(function () {
+          resetTimer = setTimeout(function () {
+            copyBtn.textContent = 'Copy command';
+            copyBtn.classList.remove('done');
+          }, 2500);
+        });
       });
-    });
 
-    // Close the tab once Claude has taken over: when the page gets hidden, or when focus comes back
-    // after the launch took it away. Not on blur alone: the browser's "Open Claude?" prompt takes focus
-    // too, and closing the tab then would dismiss the prompt before Claude opens.
-    // window.close() only works for a tab with a single history entry (e.g. opened from a link);
-    // otherwise the page just says it can be closed.
-    var leftPage = false;
-    function closeSelf() {
-      window.close();
-      setTimeout(function () {
-        document.getElementById('title').textContent = 'Claude is open';
-        document.getElementById('msg').textContent = 'You can close this tab.';
-      }, 300);
+      location.href = url;
     }
-    window.addEventListener('blur', function () { leftPage = true; });
-    window.addEventListener('focus', function () { if (leftPage) setTimeout(closeSelf, 300); });
-    document.addEventListener('visibilitychange', function () { if (document.hidden) closeSelf(); });
-
-    location.href = url;
   }
 </script>
 </body>
