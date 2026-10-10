@@ -43,6 +43,7 @@
   // The ID is validated strictly; the name is flattened to one line and capped, and the skill
   // treats it as a label only (task facts always come from Notion).
   // If the claude:// redirect doesn't work, the page stays open and shows the same command to copy by hand.
+  // Once Claude has taken over, the tab closes itself (see closeSelf below).
   var params = new URLSearchParams(location.search);
   var id = (params.get('id') || '').replace(/-/g, '').toLowerCase();
   var name = (params.get('name') || '')
@@ -109,6 +110,23 @@
         }, 2500);
       });
     });
+
+    // Close the tab once Claude has taken over: when the page gets hidden, or when focus comes back
+    // after the launch took it away. Not on blur alone: the browser's "Open Claude?" prompt takes focus
+    // too, and closing the tab then would dismiss the prompt before Claude opens.
+    // window.close() only works for a tab with a single history entry (e.g. opened from a link);
+    // otherwise the page just says it can be closed.
+    var leftPage = false;
+    function closeSelf() {
+      window.close();
+      setTimeout(function () {
+        document.getElementById('title').textContent = 'Claude is open';
+        document.getElementById('msg').textContent = 'You can close this tab.';
+      }, 300);
+    }
+    window.addEventListener('blur', function () { leftPage = true; });
+    window.addEventListener('focus', function () { if (leftPage) setTimeout(closeSelf, 300); });
+    document.addEventListener('visibilitychange', function () { if (document.hidden) closeSelf(); });
 
     location.href = url;
   }
